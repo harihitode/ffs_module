@@ -59,7 +59,7 @@ module ffs_queue
     count = qu.size();
     if (count == 0) begin
       // $display("every field is unset");
-      o_data = 'd0;
+      o_data = '1;
     end else begin
       o_data = ($clog2(N_CANDIDATES))'(qu.pop_front());
     end
@@ -73,10 +73,9 @@ module ffs_forloop
    output logic [$clog2(N_CANDIDATES)-1:0] o_data
    );
   always_comb begin
-    o_data = '0;
-    for (logic [$clog2(N_CANDIDATES):0] i = 0; i < N_CANDIDATES; i++) begin
-      if (i_data[N_CANDIDATES - 1 - i[$clog2(N_CANDIDATES)-1:0]] == 1'b1) begin
-        o_data = i[$clog2(N_CANDIDATES)-1:0];
+    for (int i = 0; i < N_CANDIDATES; i++) begin
+      o_data = i[$clog2(N_CANDIDATES)-1:0];
+      if (i_data[$high(i_data) - i] == 1'b1) begin
         break;
       end
     end

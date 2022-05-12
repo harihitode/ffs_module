@@ -7,38 +7,32 @@ module ffs_tree
    input logic [N_CANDIDATES-1:0]          i_data,
    output logic [$clog2(N_CANDIDATES)-1:0] o_data
    );
-  // barrel shifter
-  logic [$clog2(N_CANDIDATES)-1:0][N_CANDIDATES-1:0] i_data_bs;
-  logic [$clog2(N_CANDIDATES)-1:0]                   o_data_i;
+  logic [$clog2(N_CANDIDATES)-1:0]                   flag;
+  logic [N_CANDIDATES/2-1:0]                         cands [$clog2(N_CANDIDATES)];
 
   generate for (genvar i = 0; i < $clog2(N_CANDIDATES); i++) begin
-    if (i == 0) begin
+    for (genvar j = 0; j < N_CANDIDATES/2; j++) begin
       always_comb begin
-        if (|(i_data[$high(i_data)-:N_CANDIDATES/2])) begin
-          i_data_bs[i] = i_data;
-          o_data_i[i] = 'b0;
-        end else begin
-          // shift left
-          i_data_bs[i] = i_data << (N_CANDIDATES/2);
-          o_data_i[i] = 'b1;
-        end
-      end
-    end else begin
-      always_comb begin
-        if (|(i_data_bs[i-1][$high(i_data)-:N_CANDIDATES/(2**(i+1))])) begin
-          i_data_bs[i] = i_data_bs[i-1];
-          o_data_i[i] = 'b0;
-        end else begin
-          // shift left
-          i_data_bs[i] = i_data_bs[i-1] << (N_CANDIDATES/(2**(i+1)));
-          o_data_i[i] = 'b1;
-        end
+        // width: N_CANDIDATES/(2**(i+1))
+        // N_CANDIDATES - (N_CANDIDATES/(2**i)) * ((N_CANDIDATES/2 - j - 1)%(2**i))-1
+        // head:  N_CANDIDATES - (N_CANDIDATES/(2**i)) * (j%(2**i)) - 1
+        // (N_CANDIDATES/2-j-1)%(2**1) case 8
+        /// i(level) = 0: 0, 0, 0, 0
+        /// i(level) = 1: 1, 0, 1, 0
+        /// i(level) = 2: 3, 2, 1, 0
+        cands[i][j] = |i_data[N_CANDIDATES - (N_CANDIDATES/(2**i)) * ((N_CANDIDATES/2 - j - 1)%(2**i))-1-:N_CANDIDATES/(2**(i+1))];
       end
     end
   end endgenerate
+
   always_comb begin
-    o_data = {<<{o_data_i}};
+    flag = '0;
+    for (int i = 0; i < $clog2(N_CANDIDATES); i++) begin
+      flag = {flag[$high(flag)-1:0], cands[i][flag[$high(flag)-1:0]]};
+    end
   end
+
+  assign o_data = ~flag;
 endmodule
 
 module ffs_queue
